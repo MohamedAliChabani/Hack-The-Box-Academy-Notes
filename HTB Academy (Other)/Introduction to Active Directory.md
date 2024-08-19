@@ -36,6 +36,8 @@ The graphic below shows two forests, `INLANEFREIGHT.LOCAL` and `FREIGHTLOGISTICS
 
 - **<mark class="hltr-red">Attributes</mark>**: Every object in Active Directory has an associated set of [attributes](https://docs.microsoft.com/en-us/windows/win32/adschema/attributes-all) used to define characteristics of the given object.
 
+- <mark class="hltr-red">Schema</mark>: The Active Directory [schema](https://docs.microsoft.com/en-us/windows/win32/ad/schema) is essentially the blueprint of any enterprise environment. It defines what types of objects can exist in the AD database and their associated attributes. It holds information about each object. For example, users in AD belong to the class "user," and computer objects to "computer," and so on. Each object has its own information that are stored in Attributes. When an object is created from a class, this is called instantiation, and an object created from a specific class is called an instance of that class.
+
 - **<mark class="hltr-red">Domain</mark>**: A domain is a logical group of objects such as computers, users, OUs, groups, etc. We can think of each domain as a different city within a state or country. Domains can operate entirely independently of one another or be connected via trust relationships.
 
 - <mark class="hltr-red">Forest</mark>: A forest is a collection of Active Directory domains. It is the topmost container and contains all of the AD objects introduced below, including but not limited to domains, users, groups, computers, and Group Policy objects. A forest can contain one or multiple domains and be thought of as a state in the US or a country within the EU. Each forest operates independently but may have various trust relationships with other forests.
@@ -113,3 +115,94 @@ They are leaf objects and are NOT security principals (securable objects), so th
 
 ## <mark class="hltr-cyan">Printers</mark>
 
+A printer object points to a printer accessible within the AD network. Like a contact, a printer is a `leaf object` and not a security principal, so it only has a GUID. Printers have attributes such as the printer's name, driver information, port number, etc.
+
+## <mark class="hltr-cyan">Computers</mark>
+
+A computer object is any computer joined to the AD network (workstation or server). Computers are `leaf objects` because they do not contain other objects.
+
+However, they are considered security principals and have a SID and a GUID. Like users, they are prime targets for attackers since full administrative access to a computer (as the all-powerful `NT AUTHORITY\SYSTEM` account) grants similar rights to a standard domain user and can be used to perform the majority of the enumeration tasks that a user account can (save for a few exceptions across domain trusts.)
+
+## <mark class="hltr-cyan">Shared Folders</mark>
+
+A shared folder object points to a shared folder on the specific computer where the folder resides. 
+
+Shared folders can be either accessible to everyone (even those without a valid AD account), open to only authenticated users, or be locked down to only allow certain users/groups access. Shared folders are NOT security principals and only have a GUID. A shared folder's attributes can include the name, location on the system, security access rights.
+
+## <mark class="hltr-cyan">Groups</mark>
+
+A group is considered a container object because it can contain other objects, including users, computers, and even other groups.
+
+A group IS regarded as a security principal and has a SID and a GUID.
+
+In AD, groups are a way to manage user permissions and access to other securable objects (both users and computers). Let's say we want to give 20 help desk users access to the Remote Management Users group on a jump host. Instead of adding the users one by one, we could add the group, and the users would inherit the intended permissions via their membership in the group.
+
+In Active Directory, we commonly see what are called "[nested groups](https://docs.microsoft.com/en-us/windows/win32/ad/nesting-a-group-in-another-group)" (a group added as a member of another group), which can lead to a user(s) obtaining unintended rights. Nested group membership is something we see and often leverage during penetration tests.
+
+Groups in AD can have many [attributes](http://www.selfadsi.org/group-attributes.htm), the most common being the name, description, membership, other groups that the group belongs to, etc.
+
+## <mark class="hltr-cyan">Organizational Units (OUs)</mark>
+
+An organizational unit, or OU, is a container that systems administrators can use to store similar objects for ease of administration.
+
+OUs are often used for administrative delegation of tasks without granting a user account full administrative rights. For example, we may have a top-level OU called Employees and then child OUs under it for the various departments. If an account were given the right to reset passwords over the top-level OU, this user would have the right to reset passwords for all users in the company. However, if the OU structure were such that specific departments were child OUs of the Help Desk OU, then any user placed in the Help Desk OU would have this right delegated to them if granted.
+
+Other tasks that may be delegated at the OU level include creating/deleting users, modifying group membership, managing Group Policy links, and performing password resets. OUs are very useful for managing Group Policy settings across a subset of users and groups within a domain. For example, we may want to set a specific password policy for privileged service accounts so these accounts could be placed in a particular OU and then have a Group Policy object assigned to it, which would enforce this password policy on all accounts placed inside of it. A few OU attributes include its name, members, security settings, and more.
+
+## <mark class="hltr-cyan">Domain</mark>
+
+A domain is the structure of an AD network.
+
+Domains contain objects such as users and computers, which are organized into container objects: groups and OUs.
+
+Every domain has its own separate database and sets of policies that can be applied to any and all objects within the domain. Some policies are set by default (and can be tweaked), such as the domain password policy. In contrast, others are created and applied based on the organization's need, such as blocking access to cmd.exe for all non-administrative users or mapping shared drives at log in.
+
+## <mark class="hltr-cyan">Domain Controllers</mark>
+
+Domain Controllers are essentially the brains of an AD network.
+
+They handle authentication requests, verify users on the network, and control who can access the various resources in the domain. All access requests are validated via the domain controller and privileged access requests are based on predetermined roles assigned to users.
+It also enforces security policies and stores information about every other object in the domain.
+
+---
+
+# <mark class="hltr-pink">Active Directory Functionality</mark>
+
+## <mark class="hltr-cyan">FSMO Roles</mark>
+
+There are five Flexible Single Master Operation (FSMO) roles. These roles can be defined as follows:
+![[Pasted image 20240819142006.png]]
+
+## <mark class="hltr-cyan">Trusts</mark>
+
+A trust is used to establish `forest-forest` or `domain-domain` authentication, allowing users to access resources in (or administer) another domain outside of the domain their account resides in. A trust creates a link between the authentication systems of two domains.
+
+![[Pasted image 20240819142840.png]]
+
+![[Pasted image 20240819142949.png]]Trusts can be transitive or non-transitive.
+
+- A transitive trust means that trust is extended to objects that the child domain trusts.
+
+- In a non-transitive trust, only the child domain itself is trusted.
+
+
+Trusts can be set up to be one-way or two-way (bidirectional).
+
+- In bidirectional trusts, users from both trusting domains can access resources.
+- In a one-way trust, only users in a trusted domain can access resources in a trusting domain, not vice-versa. The direction of trust is opposite to the direction of access.
+
+---
+
+# <mark class="hltr-pink">Active Directory Protocols</mark>
+
+## <mark class="hltr-cyan">Kerberos</mark>
+
+Kerberos has been the default authentication protocol for domain accounts since Windows 2000.
+
+When a user logs into their PC, Kerberos is used to authenticate them via mutual authentication. Kerberos is a stateless authentication protocol based on tickets instead of transmitting user passwords over the network.
+
+As part of Active Directory Domain Services (AD DS), Domain Controllers have a Kerberos Key Distribution Center (KDC) that issues tickets
+
+### <mark class="hltr-orange">Kerberos Authentication Process</mark>
+
+![[images/Pasted image 20240819165815.png]]
