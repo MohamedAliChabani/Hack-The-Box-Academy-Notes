@@ -206,3 +206,169 @@ As part of Active Directory Domain Services (AD DS), Domain Controllers have a K
 ### <mark class="hltr-orange">Kerberos Authentication Process</mark>
 
 ![[images/Pasted image 20240819165815.png]]
+
+The Kerberos protocol uses port 88 (both TCP and UDP). When enumerating an Active Directory environment, we can often locate Domain Controllers by performing port scans looking for open port 88 using a tool such as Nmap.
+
+## <mark class="hltr-cyan">DNS</mark>
+
+Active Directory Domain Services (AD DS) uses DNS to allow clients (workstations, servers, and other systems that communicate with the domain) to locate Domain Controllers and for Domain Controllers that host the directory service to communicate amongst themselves.
+
+## <mark class="hltr-cyan">LDAP</mark>
+
+Active Directory supports [Lightweight Directory Access Protocol (LDAP)](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol) for directory lookups.
+
+LDAP uses port 389, and LDAP over SSL (LDAPS) communicates over port 636.
+
+AD stores user account information and security information such as passwords and facilitates sharing this information with other devices on the network. LDAP is the language that applications use to communicate with other servers that provide directory services. In other words, LDAP is how systems in the network environment can "speak" to AD.
+
+![[Pasted image 20240819171256.png]]
+
+❗: The relationship between AD and LDAP can be compared to Apache and HTTP. The same way Apache is a web server that uses the HTTP protocol, Active Directory is a directory server that uses the LDAP protocol.
+
+## <mark class="hltr-cyan">NTLM Authentication</mark>
+
+Aside from Kerberos and LDAP, Active Directory uses several other authentication methods which can be used (and abused) by applications and services in AD.
+
+![[Pasted image 20240819180050.png]]
+
+### <mark class="hltr-orange">LM</mark>
+
+`LAN Manager` (LM or LANMAN) hashes are the oldest password storage mechanism used by the Windows operating system.
+
+If in use, they are stored in the SAM database on a Windows host and the NTDS.DIT database on a Domain Controller.
+
+❗: Due to significant security weaknesses in the hashing algorithm used for LM hashes, it has been turned off by default since Windows Vista/Server 2008. However, it is still common to encounter, especially in large environments where older systems are still used
+
+### <mark class="hltr-orange">NTHash (NTLM)</mark>
+
+![[Pasted image 20240819180820.png]]
+
+An NTLM hash looks like this:
+```shell-session
+Rachel:500:aad3c435b514a4eeaad3b935b51304fe:e46b9e548fa0d122de7f59fb6d48eaa2:::
+```
+
+- `Rachel` is the username
+- `500` is the Relative Identifier (RID). 500 is the known RID for the `administrator` account
+- `aad3c435b514a4eeaad3b935b51304fe` is the LM hash and, if LM hashes are disabled on the system, can not be used for anything
+- `e46b9e548fa0d122de7f59fb6d48eaa2` is the NT hash. This hash can either be cracked offline to reveal the cleartext value (depending on the length/strength of the password) or used for a pass-the-hash attack.
+
+### <mark class="hltr-orange">NTLMv1</mark>
+
+The NTLM protocol performs a challenge/response between a server and client using the NT hash. NTLMv1 uses both the NT and the LM hash, which can make it easier to "crack" offline after capturing a hash.
+
+NTLMv1 Hash Example:
+```shell-session
+u4-netntlm::kNS:338d08f8e26de93300000000000000000000000000000000:9526fb8c23a90751cdd619b6cea564742e1e4bf33006ba41:cb8086049ec4736c
+```
+
+### <mark class="hltr-orange">NTLMv2</mark>
+
+The NTLMv2 protocol was first introduced in Windows NT 4.0 SP4 and was created as a stronger alternative to NTLMv1.
+
+NTLMv2 Hash Example:
+```shell-session
+admin::N46iSNekpT:08ca45b7d7ea58ee:88dcbe4446168966a153a0064958dac6:5c7830315c7830310000000000000b45c67103d07d7b95acd12ffa11230e0000000052920b85f78d013c31cdb3b92f5d765c783030
+```
+
+---
+
+# <mark class="hltr-pink">Users and Groups</mark>
+
+## <mark class="hltr-cyan">Users</mark>
+
+### <mark class="hltr-orange">Local Accounts</mark>
+
+Local accounts are stored locally on a particular server or workstation.
+
+Any rights assigned can only be granted to that specific host and will not work across the domain.
+
+Local user accounts are considered security principals but can only manage access to and secure resources on a standalone host.
+
+**default local user accounts**:
+- <mark class="hltr-green">Administrator</mark>: this account has the SID `S-1-5-domain-500` and is the first account created with a new Windows installation. It has full control over almost every resource on the system. It cannot be deleted or locked, but it can be disabled or renamed.
+
+- <mark class="hltr-green">Guest</mark>: this account is disabled by default. The purpose of this account is to allow users without an account on the computer to log in temporarily with limited access rights. By default, it has a blank password and is generally recommended to be left disabled because of the security risk of allowing anonymous access to a host.
+
+- <mark class="hltr-green">SYSTEM</mark>: The SYSTEM (or `NT AUTHORITY\SYSTEM`) account on a Windows host is the default account installed and used by the operating system to perform many of its internal functions. SYSTEM is a service account and does not run entirely in the same context as a regular user. One thing to note with this account is that a profile for it does not exist, but it will have permissions over almost everything on the host. It does not appear in User Manager and cannot be added to any groups. A `SYSTEM` account is the highest permission level one can achieve on a Windows host and, by default, is granted Full Control permissions to all files on a Windows system.
+
+- <mark class="hltr-green">Network Service</mark>: This is a predefined local account used by the Service Control Manager (SCM) for running Windows services.
+
+- <mark class="hltr-green">Local Service</mark>: This is another predefined local account used by the Service Control Manager (SCM) for running Windows services. It is configured with minimal privileges on the computer and presents anonymous credentials to the network.
+
+### <mark class="hltr-orange">Domain Users</mark>
+
+Domain users differ from local users in that they are granted rights from the domain to access resources such as file servers, printers, intranet hosts, and other objects based on the permissions granted to their user account or the group that account is a member of.
+
+One account to keep in mind is the `KRBTGT` account, however. This is a type of local account built into the AD infrastructure. This account acts as a service account for the Key Distribution service providing authentication and access for domain resources. This account is a common target of many attackers since gaining control or access will enable an attacker to have unconstrained access to the domain.
+
+## <mark class="hltr-cyan">Groups</mark>
+
+Groups are used to place users, computers, and contact objects into management units that provide ease of administration over permissions and facilitate the assignment of resources such as printers and file share access.
+
+Groups in Active Directory have two fundamental characteristics: `type` and `scope`. The `group type` defines the group's purpose, while the `group scope` shows how the group can be used within the domain or forest.
+
+![[Pasted image 20240820153918.png]]
+
+### <mark class="hltr-orange">Group Types</mark>
+
+There are two main types: `security` and `distribution` groups.
+
+- The `Security groups` type is primarily for ease of assigning permissions and rights to a collection of users instead of one at a time. They simplify management and reduce overhead when assigning permissions and rights for a given resource. All users added to a security group will inherit any permissions assigned to the group, making it easier to move users in and out of groups while leaving the group's permissions unchanged.
+
+- The `Distribution groups` type is used by email applications such as Microsoft Exchange to distribute messages to group members. They function much like mailing lists. This type of group cannot be used to assign permissions to resources in a domain environment.
+
+### <mark class="hltr-orange">Group Scopes</mark>
+
+There are three different `group scopes` that can be assigned when creating a new group.
+
+1. Domain Local Group
+2. Global Group
+3. Universal Group
+
+#### <mark class="hltr-grey">Domain Local Group</mark>
+
+Domain local groups can only be used to manage permissions to domain resources in the domain where it was created. Local groups cannot be used in other domains but `CAN` contain users from `OTHER` domains. Local groups can be nested into (contained within) other local groups but `NOT` within global groups.
+
+#### <mark class="hltr-grey">Global Group</mark>
+
+Global groups can be used to grant access to resources in `another domain`. A global group can only contain accounts from the domain where it was created. Global groups can be added to both other global groups and local groups.
+
+#### <mark class="hltr-grey">Universal Group</mark>
+The universal group scope can be used to manage resources distributed across multiple domains and can be given permissions to any object within the same `forest`. They are available to all domains within an organization and can contain users from any domain.
+
+#### <mark class="hltr-grey">AD Group Scope Example</mark>
+
+```powershell-session
+Get-ADGroup  -Filter * |select samaccountname,groupscope
+
+samaccountname                           groupscope
+--------------                           ----------
+Administrators                          DomainLocal
+Users                                   DomainLocal
+Guests                                  DomainLocal
+Print Operators                         DomainLocal
+Backup Operators                        DomainLocal
+Replicator                              DomainLocal
+Remote Desktop Users                    DomainLocal
+Network Configuration Operators         DomainLocal
+Distributed COM Users                   DomainLocal
+IIS_IUSRS                               DomainLocal
+Cryptographic Operators                 DomainLocal
+Event Log Readers                       DomainLocal
+Certificate Service DCOM Access         DomainLocal
+RDS Remote Access Servers               DomainLocal
+RDS Endpoint Servers                    DomainLocal
+RDS Management Servers                  DomainLocal
+Hyper-V Administrators                  DomainLocal
+Access Control Assistance Operators     DomainLocal
+Remote Management Users                 DomainLocal
+Storage Replica Administrators          DomainLocal
+Domain Computers                             Global
+Domain Controllers                           Global
+Schema Admins                             Universal
+Enterprise Admins                         Universal
+Cert Publishers                         DomainLocal
+Domain Admins                                Global
+Domain Users                                 Global
+```

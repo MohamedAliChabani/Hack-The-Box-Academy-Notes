@@ -255,7 +255,7 @@ sudo nmap 10.129.14.128 -sV -sC -p3306 --script mysql*
 - interacting with the database
 ![[Pasted image 20240727103213.png]]
 
-The most important databases for the MySQL server are the `system schema` (`sys`) and `information schema` (`information_schema`).
+The most important databases for the MySQL server are the `system schema` (<mark class="hltr-green">sys</mark>) and `information schema` (<mark class="hltr-green">information_schema</mark>).
 The system schema contains tables, information, and metadata necessary for management.
 
 ```
@@ -279,9 +279,20 @@ use auxiliary/scanner/mssql/mssql_ping
 set RHOSTS 10.129.201.248
 run
 ```
+
 - Connecting with Mssqlclient.py
 ```
 python3 mssqlclient.py Administrator@10.129.201.248 -windows-auth
+```
+
+- Connecting with sqsh
+```shell-session
+sqsh -S 10.129.20.13 -U username -P Password123
+```
+
+- Connecting from windows host
+```cmd-session
+C:> sqlcmd -S 10.129.20.13 -U username -P Password123
 ```
 
 MSSQL uses <mark class="hltr-red">T-SQL</mark> so the syntax is different from mysql
@@ -505,5 +516,5 @@ evil-winrm -i 10.129.201.248 -u Cry0l1t3 -p P455w0rD!
 The initialization of the WMI communication always takes place on `TCP` port `135`, and after the successful establishment of the connection, the communication is moved to a random port. For example, the program [wmiexec.py](https://github.com/SecureAuthCorp/impacket/blob/master/examples/wmiexec.py) from the Impacket toolkit can be used for this.
 
 ```
-/usr/share/doc/python3-impacket/examples/wmiexec.py Cry0l1t3:"P455w0rD!"@10.129.201.248 "hostname"
+wmiexec.py Cry0l1t3:"P455w0rD!"@10.129.201.248 "hostname"
 ```

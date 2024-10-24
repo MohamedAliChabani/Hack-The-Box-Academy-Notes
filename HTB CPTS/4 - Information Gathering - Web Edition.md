@@ -141,7 +141,7 @@ At the core of `virtual hosting` is the ability of web servers to distinguish be
 ![[Pasted image 20240801015315.png]]
 
 ```gobuster
-gobuster vhost -u http://<target_IP_address> -w <wordlist_file> --append-domain
+gobuster vhost -u http://<target_IP_address> -w <wordlist_file> --append-domain inlanefreight.htb
 ```
 
 (You might want to add the new vhost entry to the /etc/hosts for further information gathering)
